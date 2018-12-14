@@ -112,7 +112,7 @@ if __name__ == "__main__":
     del df_new_merchant_trans;
     gc.collect()
 
-    df_train.head(5)
+    print(df_train.head(5))
     df_train.to_csv('df_train_head.csv',index=False)
 
     train_y = df_train['target']
