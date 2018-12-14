@@ -115,8 +115,8 @@ if __name__ == "__main__":
     feature_is_time = ['first_active_month','hist_purchase_date_max','hist_purchase_date_min','new_hist_purchase_date_max',
         'new_hist_purchase_date_min']
 
-    df_train.drop(columns = feature_is_time)
-    df_test.drop(columns = feature_is_time)
+    df_train.drop(columns = feature_is_time,inplace=True)
+    df_test.drop(columns = feature_is_time,inplace=True)
 
     print(df_train.head(5))
     df_train.to_csv('df_train_head.csv',index=False)
