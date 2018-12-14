@@ -107,9 +107,13 @@ if __name__ == "__main__":
     df_test = df_test.merge(df_hist_trans_group,on='card_id',how='left')
     del df_hist_trans_group;gc.collect()
 
-    del df_hist_trans;gc.collect()
-    del df_new_merchant_trans;gc.collect()
+    del df_hist_trans;
+    gc.collect()
+    del df_new_merchant_trans;
+    gc.collect()
+
     df_train.head(5)
+    df_train.to_csv('df_train_head.csv',index=False)
 
     train_y = df_train['target']
     train_x = df_train.drop('target', axis=1)
