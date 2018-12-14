@@ -111,8 +111,8 @@ if __name__ == "__main__":
     del df_new_merchant_trans;gc.collect()
     df_train.head(5)
 
-    train_y = hdd['target']
-    train_x = hdd.drop('target', axis=1)
+    train_y = df_train['target']
+    train_x = df_train.drop('target', axis=1)
 
     rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
                                     max_depth=4,#best_parms['max_depth'],
@@ -122,8 +122,8 @@ if __name__ == "__main__":
 
     rf.fit(train_x,train_y)
 
-    test_y = test_hdd['failure']
-    test_x = test_hdd.drop('failure', axis=1)
+    test_y = df_test['failure']
+    test_x = df_test.drop('failure', axis=1)
 
     test_class_preds = rf.predict(test_x)
     train_class_preds = rf.predict(train_x)
