@@ -22,13 +22,13 @@ def get_new_columns(name,aggs):
 
 if __name__ == "__main__":
     df_train = pd.read_csv('../input/train.csv')
-    print(df_train.head(5))
+    # print(df_train.head(5))
     df_test = pd.read_csv('../input/test.csv')
-    print(df_test.head(5))
+    # print(df_test.head(5))
     df_hist_trans = pd.read_csv('../input/historical_transactions.csv')
-    print(df_hist_trans.head(5))
+    # print(df_hist_trans.head(5))
     df_new_merchant_trans = pd.read_csv('../input/new_merchant_transactions.csv')
-    print(df_new_merchant_trans.head(5))
+    # print(df_new_merchant_trans.head(5))
 
     for df in [df_hist_trans,df_new_merchant_trans]:
         df['category_2'].fillna(1.0,inplace=True)
