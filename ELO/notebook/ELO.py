@@ -172,7 +172,7 @@ if __name__ == "__main__":
          "random_state": 4590}
     folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=4590)
     oof = np.zeros(len(df_train))
-    predictions = np.zeros(len(df_test))
+    lgbm_predictions = np.zeros(len(df_test))
     feature_importance_df = pd.DataFrame()
 
     for fold_, (trn_idx, val_idx) in enumerate(folds.split(df_train,df_train['outliers'].values)):
