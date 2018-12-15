@@ -223,7 +223,7 @@ if __name__ == "__main__":
     xgb_predictions = np.zeros(len(df_test))
 
 
-    for fold_, (trn_idx, val_idx) in enumerate(FOLDs.split(df_train,df_train['outliers'].values))):
+    for fold_, (trn_idx, val_idx) in enumerate(FOLDs.split(df_train,df_train['outliers'].values)):
         trn_data = xgb.DMatrix(data=train.iloc[trn_idx], label=target.iloc[trn_idx])
         val_data = xgb.DMatrix(data=train.iloc[val_idx], label=target.iloc[val_idx])
         watchlist = [(trn_data, 'train'), (val_data, 'valid')]
