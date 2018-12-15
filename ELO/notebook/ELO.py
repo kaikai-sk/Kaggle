@@ -112,33 +112,125 @@ if __name__ == "__main__":
     del df_new_merchant_trans;
     gc.collect()
 
-    feature_is_time = ['first_active_month','hist_purchase_date_max','hist_purchase_date_min','new_hist_purchase_date_max',
-        'new_hist_purchase_date_min']
-
-    df_train.drop(columns = feature_is_time,inplace=True)
-    df_test.drop(columns = feature_is_time,inplace=True)
+    # feature_is_time = ['first_active_month','hist_purchase_date_max','hist_purchase_date_min','new_hist_purchase_date_max',
+    #     'new_hist_purchase_date_min']
+    #
+    # df_train.drop(columns = feature_is_time,inplace=True)
+    # df_test.drop(columns = feature_is_time,inplace=True)
 
     print(df_train.head(5))
     df_train.to_csv('df_train_head.csv',index=False)
 
-    train_y = df_train['target']
-    train_x = df_train.drop('target', axis=1)
+    df_train['outliers'] = 0
+    df_train.loc[df_train['target'] < -30, 'outliers'] = 1
+    df_train['outliers'].value_counts()
 
-    rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
-                                    max_depth=4,#best_parms['max_depth'],
-                                    max_features='auto',#best_parms['max_features'],
-                                    min_samples_leaf=30,#best_parms['min_samples_leaf'],
-                                    n_estimators=2500)#best_parms['n_estimators'])
+    for df in [df_train,df_test]:
+        df['first_active_month'] = pd.to_datetime(df['first_active_month'])
+        df['dayofweek'] = df['first_active_month'].dt.dayofweek
+        df['weekofyear'] = df['first_active_month'].dt.weekofyear
+        df['month'] = df['first_active_month'].dt.month
+        df['elapsed_time'] = (datetime.datetime.today() - df['first_active_month']).dt.days
+        df['hist_first_buy'] = (df['hist_purchase_date_min'] - df['first_active_month']).dt.days
+        df['new_hist_first_buy'] = (df['new_hist_purchase_date_min'] - df['first_active_month']).dt.days
+        for f in ['hist_purchase_date_max','hist_purchase_date_min','new_hist_purchase_date_max',\
+                         'new_hist_purchase_date_min']:
+            df[f] = df[f].astype(np.int64) * 1e-9
+        df['card_id_total'] = df['new_hist_card_id_size']+df['hist_card_id_size']
+        df['purchase_amount_total'] = df['new_hist_purchase_amount_sum']+df['hist_purchase_amount_sum']
 
-    rf.fit(train_x,train_y)
+    for f in ['feature_1','feature_2','feature_3']:
+        order_label = df_train.groupby([f])['outliers'].mean()
+        df_train[f] = df_train[f].map(order_label)
+        df_test[f] = df_test[f].map(order_label)
 
-    test_y = df_test['failure']
-    test_x = df_test.drop('failure', axis=1)
+    df_train_columns = [c for c in df_train.columns if c not in ['card_id', 'first_active_month','target','outliers']]
+    target = df_train['target']
+    del df_train['target']
 
-    test_class_preds = rf.predict(test_x)
-    train_class_preds = rf.predict(train_x)
+    param = {'num_leaves': 31,
+         'min_data_in_leaf': 30,
+         'objective':'regression',
+         'max_depth': -1,
+         'learning_rate': 0.01,
+         "min_child_samples": 20,
+         "boosting": "gbdt",
+         "feature_fraction": 0.9,
+         "bagging_freq": 1,
+         "bagging_fraction": 0.9 ,
+         "bagging_seed": 11,
+         "metric": 'rmse',
+         "lambda_l1": 0.1,
+         "verbosity": -1,
+         "nthread": 4,
+         "random_state": 4590}
+    folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=4590)
+    oof = np.zeros(len(df_train))
+    predictions = np.zeros(len(df_test))
+    feature_importance_df = pd.DataFrame()
 
-    train_rmse = np.sqrt(metrics.mean_squared_error(train_y,train_class_preds))
-    test_rmse = np.sqrt(metrics.mean_squared_error(test_y,test_class_preds))
+    for fold_, (trn_idx, val_idx) in enumerate(folds.split(df_train,df_train['outliers'].values)):
+        print("fold {}".format(fold_))
+        trn_data = lgb.Dataset(df_train.iloc[trn_idx][df_train_columns], label=target.iloc[trn_idx])#, categorical_feature=categorical_feats)
+        val_data = lgb.Dataset(df_train.iloc[val_idx][df_train_columns], label=target.iloc[val_idx])#, categorical_feature=categorical_feats)
 
-    print("train_rmse : ",train_rmse , "test_rmse : " , test_rmse)
+        num_round = 10000
+        clf = lgb.train(param, trn_data, num_round, valid_sets = [trn_data, val_data], verbose_eval=100, early_stopping_rounds = 100)
+        oof[val_idx] = clf.predict(df_train.iloc[val_idx][df_train_columns], num_iteration=clf.best_iteration)
+
+        fold_importance_df = pd.DataFrame()
+        fold_importance_df["Feature"] = df_train_columns
+        fold_importance_df["importance"] = clf.feature_importance()
+        fold_importance_df["fold"] = fold_ + 1
+        feature_importance_df = pd.concat([feature_importance_df, fold_importance_df], axis=0)
+
+        predictions += clf.predict(df_test[df_train_columns], num_iteration=clf.best_iteration) / folds.n_splits
+
+    np.sqrt(mean_squared_error(oof, target))
+
+    cols = (feature_importance_df[["Feature", "importance"]]
+        .groupby("Feature")
+        .mean()
+        .sort_values(by="importance", ascending=False)[:1000].index)
+
+    best_features = feature_importance_df.loc[feature_importance_df.Feature.isin(cols)]
+
+    plt.figure(figsize=(14,25))
+    sns.barplot(x="importance",
+                y="Feature",
+                data=best_features.sort_values(by="importance",
+                                               ascending=False))
+    plt.title('LightGBM Features (avg over folds)')
+    plt.tight_layout()
+    plt.savefig('lgbm_importances.png')
+
+    sub_df = pd.DataFrame({"card_id":df_test["card_id"].values})
+    sub_df["target"] = predictions
+    sub_df.to_csv("submission.csv", index=False)
+
+
+
+
+
+
+    # train_y = df_train['target']
+    # train_x = df_train.drop('target', axis=1)
+    #
+    # rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
+    #                                 max_depth=4,#best_parms['max_depth'],
+    #                                 max_features='auto',#best_parms['max_features'],
+    #                                 min_samples_leaf=30,#best_parms['min_samples_leaf'],
+    #                                 n_estimators=2500)#best_parms['n_estimators'])
+    #
+    # rf.fit(train_x,train_y)
+    #
+    # test_y = df_test['failure']
+    # test_x = df_test.drop('failure', axis=1)
+    #
+    # test_class_preds = rf.predict(test_x)
+    # train_class_preds = rf.predict(train_x)
+    #
+    # train_rmse = np.sqrt(metrics.mean_squared_error(train_y,train_class_preds))
+    # test_rmse = np.sqrt(metrics.mean_squared_error(test_y,test_class_preds))
+    #
+    # print("train_rmse : ",train_rmse , "test_rmse : " , test_rmse)
