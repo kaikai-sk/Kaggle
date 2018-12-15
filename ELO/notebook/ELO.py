@@ -216,7 +216,8 @@ if __name__ == "__main__":
     xgb_params = {'eta': 0.001, 'max_depth': 7, 'subsample': 0.8, 'colsample_bytree': 0.8,
           'objective': 'reg:linear', 'eval_metric': 'rmse', 'silent': True}
 
-    FOLDs = KFold(n_splits=5, shuffle=True, random_state=1989)
+    FOLDs = StratifiedKFold(n_splits=5, shuffle=True, random_state=4590)
+    #KFold(n_splits=5, shuffle=True, random_state=1989)
 
     oof_xgb = np.zeros(len(df_train))
     xgb_predictions = np.zeros(len(df_test))
