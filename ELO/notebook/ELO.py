@@ -5,6 +5,7 @@ import gc
 import matplotlib.pyplot as plt
 import seaborn as sns
 import lightgbm as lgb
+import xgboost as xgb
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import mean_squared_error
 import warnings
@@ -13,6 +14,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import ensemble, metrics
+
 
 warnings.filterwarnings('ignore')
 np.random.seed(4590)
@@ -209,6 +211,31 @@ if __name__ == "__main__":
     plt.savefig('lgbm_importances.png')
 
     """
+        xgb 模型
+    """
+    xgb_params = {'eta': 0.001, 'max_depth': 7, 'subsample': 0.8, 'colsample_bytree': 0.8,
+          'objective': 'reg:linear', 'eval_metric': 'rmse', 'silent': True}
+
+    FOLDs = KFold(n_splits=5, shuffle=True, random_state=1989)
+
+    oof_xgb = np.zeros(len(df_train))
+    xgb_predictions = np.zeros(len(df_test))
+
+
+    for fold_, (trn_idx, val_idx) in enumerate(FOLDs.split(df_train)):
+        trn_data = xgb.DMatrix(data=train.iloc[trn_idx], label=target.iloc[trn_idx])
+        val_data = xgb.DMatrix(data=train.iloc[val_idx], label=target.iloc[val_idx])
+        watchlist = [(trn_data, 'train'), (val_data, 'valid')]
+        print("xgb " + str(fold_) + "-" * 50)
+        num_round = 2000
+        xgb_model = xgb.train(xgb_params, trn_data, num_round, watchlist, early_stopping_rounds=100, verbose_eval=200)
+        oof_xgb[val_idx] = xgb_model.predict(xgb.DMatrix(train.iloc[val_idx]), ntree_limit=xgb_model.best_ntree_limit+50)
+
+        xgb_predictions += xgb_model.predict(xgb.DMatrix(test), ntree_limit=xgb_model.best_ntree_limit+50) / FOLDs.n_splits
+
+    np.sqrt(mean_squared_error(oof_xgb, target))
+
+    """
         随机森林模型
     """
     train_y = target
@@ -235,7 +262,7 @@ if __name__ == "__main__":
     # print("train_rmse : ",train_rmse , "test_rmse : " , test_rmse)
 
 
-    predictions = (lgbm_predictions+rf_predictions) / 2
+    predictions = (lgbm_predictions + xgb_predictions + rf_predictions) / 3
 
     sub_df = pd.DataFrame({"card_id":df_test["card_id"].values})
     sub_df["target"] = predictions
