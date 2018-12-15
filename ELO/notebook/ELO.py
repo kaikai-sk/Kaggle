@@ -224,15 +224,15 @@ if __name__ == "__main__":
 
 
     for fold_, (trn_idx, val_idx) in enumerate(FOLDs.split(df_train,df_train['outliers'].values)):
-        trn_data = xgb.DMatrix(data=df_train.iloc[trn_idx], label=target.iloc[trn_idx])
-        val_data = xgb.DMatrix(data=df_train.iloc[val_idx], label=target.iloc[val_idx])
+        trn_data = xgb.DMatrix(data=df_train.iloc[trn_idx][df_train_columns], label=target.iloc[trn_idx])
+        val_data = xgb.DMatrix(data=df_train.iloc[val_idx][df_train_columns], label=target.iloc[val_idx])
         watchlist = [(trn_data, 'train'), (val_data, 'valid')]
         print("xgb " + str(fold_) + "-" * 50)
         num_round = 2000
         xgb_model = xgb.train(xgb_params, trn_data, num_round, watchlist, early_stopping_rounds=100, verbose_eval=200)
         oof_xgb[val_idx] = xgb_model.predict(xgb.DMatrix(df_train.iloc[val_idx]), ntree_limit=xgb_model.best_ntree_limit+50)
 
-        xgb_predictions += xgb_model.predict(xgb.DMatrix(df_test), ntree_limit=xgb_model.best_ntree_limit+50) / FOLDs.n_splits
+        xgb_predictions += xgb_model.predict(xgb.DMatrix(df_test[df_train_columns]), ntree_limit=xgb_model.best_ntree_limit+50) / FOLDs.n_splits
 
     np.sqrt(mean_squared_error(oof_xgb, target))
 
