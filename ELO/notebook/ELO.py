@@ -230,7 +230,7 @@ if __name__ == "__main__":
         print("xgb " + str(fold_) + "-" * 50)
         num_round = 2000
         xgb_model = xgb.train(xgb_params, trn_data, num_round, watchlist, early_stopping_rounds=100, verbose_eval=200)
-        oof_xgb[val_idx] = xgb_model.predict(xgb.DMatrix(df_train.iloc[val_idx]), ntree_limit=xgb_model.best_ntree_limit+50)
+        oof_xgb[val_idx] = xgb_model.predict(xgb.DMatrix(df_train.iloc[val_idx][df_train_columns]), ntree_limit=xgb_model.best_ntree_limit+50)
 
         xgb_predictions += xgb_model.predict(xgb.DMatrix(df_test[df_train_columns]), ntree_limit=xgb_model.best_ntree_limit+50) / FOLDs.n_splits
 
