@@ -145,9 +145,13 @@ if __name__ == "__main__":
         df_test[f] = df_test[f].map(order_label)
 
     df_train_columns = [c for c in df_train.columns if c not in ['card_id', 'first_active_month','target','outliers']]
+
     target = df_train['target']
     del df_train['target']
 
+    """
+        这里是lightgbm model
+    """
     param = {'num_leaves': 31,
          'min_data_in_leaf': 30,
          'objective':'regression',
@@ -184,7 +188,7 @@ if __name__ == "__main__":
         fold_importance_df["fold"] = fold_ + 1
         feature_importance_df = pd.concat([feature_importance_df, fold_importance_df], axis=0)
 
-        predictions += clf.predict(df_test[df_train_columns], num_iteration=clf.best_iteration) / folds.n_splits
+        lgbm_predictions += clf.predict(df_test[df_train_columns], num_iteration=clf.best_iteration) / folds.n_splits
 
     np.sqrt(mean_squared_error(oof, target))
 
@@ -204,33 +208,35 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig('lgbm_importances.png')
 
-    sub_df = pd.DataFrame({"card_id":df_test["card_id"].values})
-    sub_df["target"] = predictions
-    sub_df.to_csv("submission.csv", index=False)
+    """
+        随机森林模型
+    """
+    train_y = target
+    train_x = df_train.values
 
+    rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
+                                    max_depth=4,#best_parms['max_depth'],
+                                    max_features='auto',#best_parms['max_features'],
+                                    min_samples_leaf=30,#best_parms['min_samples_leaf'],
+                                    n_estimators=2500)#best_parms['n_estimators'])
 
+    rf.fit(train_x,train_y)
 
-
-
-
-    # train_y = df_train['target']
-    # train_x = df_train.drop('target', axis=1)
-    #
-    # rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
-    #                                 max_depth=4,#best_parms['max_depth'],
-    #                                 max_features='auto',#best_parms['max_features'],
-    #                                 min_samples_leaf=30,#best_parms['min_samples_leaf'],
-    #                                 n_estimators=2500)#best_parms['n_estimators'])
-    #
-    # rf.fit(train_x,train_y)
-    #
     # test_y = df_test['failure']
-    # test_x = df_test.drop('failure', axis=1)
-    #
-    # test_class_preds = rf.predict(test_x)
-    # train_class_preds = rf.predict(train_x)
-    #
+    test_x = df_test[df_train_columns]
+
+    rf_predictions = rf.predict(test_x)
+
+
+
     # train_rmse = np.sqrt(metrics.mean_squared_error(train_y,train_class_preds))
     # test_rmse = np.sqrt(metrics.mean_squared_error(test_y,test_class_preds))
     #
     # print("train_rmse : ",train_rmse , "test_rmse : " , test_rmse)
+
+
+    predictions = (lgbm_predictions+rf_predictions) / 2
+
+    sub_df = pd.DataFrame({"card_id":df_test["card_id"].values})
+    sub_df["target"] = predictions
+    sub_df.to_csv("submission.csv", index=False)
