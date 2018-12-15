@@ -262,7 +262,7 @@ if __name__ == "__main__":
     # print("train_rmse : ",train_rmse , "test_rmse : " , test_rmse)
 
 
-    predictions = (lgbm_predictions + xgb_predictions + rf_predictions) / 3
+    predictions = (lgbm_predictions + xgb_predictions) / 2
 
     sub_df = pd.DataFrame({"card_id":df_test["card_id"].values})
     sub_df["target"] = predictions
