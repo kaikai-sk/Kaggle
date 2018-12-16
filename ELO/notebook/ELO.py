@@ -240,7 +240,7 @@ if __name__ == "__main__":
         随机森林模型
     """
     train_y = target
-    train_x = df_train.values
+    train_x = df_train[df_train_columns].values
 
     rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
                                     max_depth=4,#best_parms['max_depth'],
