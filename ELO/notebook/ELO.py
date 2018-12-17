@@ -240,32 +240,28 @@ if __name__ == "__main__":
         随机森林模型
     """
     df_train = df_train.fillna(df_train.mean())
-    train_y = target
-    train_x = df_train[df_train_columns].values
 
-    rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
-                                    max_depth=4,#best_parms['max_depth'],
-                                    max_features='auto',#best_parms['max_features'],
-                                    min_samples_leaf=30,#best_parms['min_samples_leaf'],
-                                    n_estimators=2500)#best_parms['n_estimators'])
+    for fold_, (trn_idx, val_idx) in enumerate(FOLDs.split(df_train,df_train['outliers'].values)):
+        train_y = target[trn_idx]
+        validation_y = target[val_idx]
+        train_x = df_train[trn_idx][df_train_columns].values
+        validation_x = df_train.iloc[val_idx][df_train_columns].values
 
-    rf.fit(train_x,train_y)
-
-    # test_y = df_test['failure']
-    df_test = df_test.fillna(df_test.mean())
-    test_x = df_test[df_train_columns]
-
-    rf_predictions = rf.predict(test_x)
+        rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
+                                max_depth=6,#best_parms['max_depth'],
+                                max_features='auto',#best_parms['max_features'],
+                                min_samples_leaf=50,#best_parms['min_samples_leaf'],
+                                n_estimators=1000)#best_parms['n_estimators'])
 
 
+        rf.fit(train_x,train_y)
 
-    # train_rmse = np.sqrt(metrics.mean_squared_error(train_y,train_class_preds))
-    # test_rmse = np.sqrt(metrics.mean_squared_error(test_y,test_class_preds))
-    #
-    # print("train_rmse : ",train_rmse , "test_rmse : " , test_rmse)
+        # test_y = df_test['failure']
+        df_test = df_test.fillna(df_test.mean())
+        test_x = df_test[df_train_columns]
+        rf_predictions += rf.predict(test_x,) / FOLDs.n_splits
 
-
-    predictions = (lgbm_predictions + xgb_predictions) / 2
+    predictions = (lgbm_predictions + xgb_predictions + rf_predictions) / 3
 
     sub_df = pd.DataFrame({"card_id":df_test["card_id"].values})
     sub_df["target"] = predictions
