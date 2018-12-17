@@ -239,6 +239,7 @@ if __name__ == "__main__":
     """
         随机森林模型
     """
+    df_train = df_train.fillna(df_train.mean())
     train_y = target
     train_x = df_train[df_train_columns].values
 
