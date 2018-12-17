@@ -252,6 +252,7 @@ if __name__ == "__main__":
     rf.fit(train_x,train_y)
 
     # test_y = df_test['failure']
+    df_test = df_test.fillna(df_test.mean())
     test_x = df_test[df_train_columns]
 
     rf_predictions = rf.predict(test_x)
