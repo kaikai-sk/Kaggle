@@ -240,7 +240,7 @@ if __name__ == "__main__":
         随机森林模型
     """
     df_train = df_train.fillna(df_train.mean())
-
+    rf_predictions = np.zeros(len(df_test))
     for fold_, (trn_idx, val_idx) in enumerate(FOLDs.split(df_train,df_train['outliers'].values)):
         train_y = target[trn_idx]
         validation_y = target[val_idx]
