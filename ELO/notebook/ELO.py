@@ -244,7 +244,7 @@ if __name__ == "__main__":
     for fold_, (trn_idx, val_idx) in enumerate(FOLDs.split(df_train,df_train['outliers'].values)):
         train_y = target[trn_idx]
         validation_y = target[val_idx]
-        train_x = df_train[trn_idx][df_train_columns].values
+        train_x = df_train.iloc[trn_idx][df_train_columns].values
         validation_x = df_train.iloc[val_idx][df_train_columns].values
 
         rf = ensemble.RandomForestRegressor(#bootstrap=best_parms['bootstrap'],
